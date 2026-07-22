@@ -1,0 +1,43 @@
+# ─────────────────────────────────────────────
+#  Web Attacks ML Pipeline — Python Dependencies
+# ─────────────────────────────────────────────
+
+# Data handling
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Dataset loading from Hugging Face
+datasets>=2.14.0
+huggingface_hub>=0.17.0
+
+# Machine Learning
+scikit-learn>=1.3.0
+joblib>=1.3.0
+imbalanced-learn>=0.11.0
+
+# Feature importance / selection
+shap>=0.43.0
+
+# Visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
+plotly>=5.16.0
+kaleido>=0.2.1          # static export for plotly
+
+# Notebook
+jupyter>=1.0.0
+ipykernel>=6.25.0
+ipywidgets>=8.0.0
+
+# Optional: progress bars
+tqdm>=4.66.0
+
+# Text-feature extras (payload length, entropy)
+scipy>=1.11.0
+
+# Web application
+streamlit>=1.28.0
+flask>=3.0.0
+
+# Testing
+pytest>=7.4.0

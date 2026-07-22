@@ -1,0 +1,5 @@
+,accuracy,precision,recall,f1
+LogisticRegression,1.0,1.0,1.0,1.0
+DecisionTree,1.0,1.0,1.0,1.0
+RandomForest,1.0,1.0,1.0,1.0
+SVM,1.0,1.0,1.0,1.0

@@ -1,0 +1,17 @@
+{
+  "target_column": "Label",
+  "problem_type": "multi-class",
+  "best_model": "LogisticRegression",
+  "final_accuracy": 1.0,
+  "final_f1": 1.0,
+  "feature_columns": [
+    "Payload",
+    "text_label",
+    "ID"
+  ],
+  "class_labels": [
+    "1",
+    "2",
+    "3"
+  ]
+}
