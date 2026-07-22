@@ -582,7 +582,7 @@ elif "📊 Dashboard" in page:
                 for cls, d in bundle["pr_data"].items():
                     fig_pr.add_trace(go.Scatter(
                         x=d["recall"], y=d["precision"], mode="lines", name=cls,
-                        line=dict(color=CLASS_COLORS.get(cls, "#94a3b8")),
+                        line=dict(color=CLASS_COLORS.get(cls, "#c0e605")),
                     ))
                 fig_pr.update_layout(
                     xaxis=dict(title="Recall", gridcolor="#1f2937", range=[0, 1.02]),

