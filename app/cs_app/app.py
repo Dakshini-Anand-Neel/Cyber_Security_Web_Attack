@@ -3,9 +3,6 @@ app.py
 ======
 CyberShield — Web Attack Detection Dashboard (self-contained edition)
 
-This file + core.py have NO external dependencies on a src/ package or a
-static/style.css file — everything needed is defined in these two files.
-
 Run:
     pip install streamlit pandas numpy plotly scikit-learn joblib
     streamlit run app.py
@@ -26,10 +23,6 @@ from core import (
     generate_synthetic_dataset, train_model, predict, try_load_real_model,
 )
 
-
-# ═══════════════════════════════════════════════════════════════════════════
-# PAGE CONFIG + INLINE CSS  (no external style.css file needed)
-# ═══════════════════════════════════════════════════════════════════════════
 
 st.set_page_config(
     page_title="CyberShield — Web Attack Detector",
@@ -73,10 +66,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# SESSION STATE
-# ═══════════════════════════════════════════════════════════════════════════
-
 def _init_state():
     defaults = {
         "history": [],
@@ -99,32 +88,20 @@ def get_real_artifacts():
 
 
 def explain(text: str):
-    """Plain-language explanation box — shown only in Beginner mode."""
     if st.session_state.mode == "Beginner":
         st.markdown(f'<div class="explain-box">💡 {text}</div>', unsafe_allow_html=True)
 
 
 def expert_detail(md_text: str):
-    """Technical detail expander — always available, tucked away."""
     with st.expander("🔬 Technical details"):
         st.markdown(md_text)
 
 
-# ── FIX: buttons that "load an example into the Live Scanner" must use
-# on_click callbacks. Setting st.session_state["live_input"] directly AFTER
-# the text_input(key="live_input") widget has already rendered in the same
-# run raises StreamlitAPIException — this was the bug behind the Attack
-# Library errors. Callbacks run *before* the next script run starts, so
-# this is safe. ──────────────────────────────────────────────────────────
 def _load_example(payload: str, toast_msg: str | None = None):
     st.session_state.live_input = payload
     if toast_msg:
         st.session_state["_pending_toast"] = toast_msg
 
-
-# ═══════════════════════════════════════════════════════════════════════════
-# RESOLVE WHICH MODEL IS ACTIVE
-# ═══════════════════════════════════════════════════════════════════════════
 
 real_artifacts = get_real_artifacts()
 active_model = None
@@ -140,10 +117,6 @@ elif st.session_state.trained_bundle:
     active_metadata = st.session_state.trained_bundle["metadata"]
     model_source = "Synthetic (hypothetical-data) model trained this session"
 
-
-# ═══════════════════════════════════════════════════════════════════════════
-# RENDER HELPERS
-# ═══════════════════════════════════════════════════════════════════════════
 
 def _severity_html(label: str) -> str:
     sev_name, color, score = SEVERITY.get(label, ("UNKNOWN", "#94a3b8", 50))
@@ -215,10 +188,6 @@ def _plotly_dark(fig, height: int = 320):
     return fig
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# SIDEBAR
-# ═══════════════════════════════════════════════════════════════════════════
-
 with st.sidebar:
     st.markdown("## 🛡️ CyberShield")
     st.caption("Web Attack Detection System")
@@ -257,10 +226,6 @@ with st.sidebar:
     st.markdown(f"**Scans this session:** {len(st.session_state.history)}")
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# PAGE: PREDICT
-# ═══════════════════════════════════════════════════════════════════════════
-
 if "🎯 Predict" in page:
     st.markdown("""
     <div class="hero-banner">
@@ -274,7 +239,7 @@ if "🎯 Predict" in page:
     """, unsafe_allow_html=True)
 
     explain(
-        "**XSS** and **SQLi** are two common ways attackers try to break websites: "
+        "<b>XSS</b> and <b>SQLi</b> are two common ways attackers try to break websites: "
         "XSS sneaks a bit of script into a page so it runs in someone else's browser; "
         "SQLi sneaks database commands into a text field to trick the database into "
         "leaking or changing data. This page shows you what those look like and lets "
@@ -299,7 +264,6 @@ if "🎯 Predict" in page:
             "⚡ Live Scanner", "📦 Batch Analysis", "🗂️ Attack Library",
         ])
 
-        # ── Live Scanner ─────────────────────────────────────────────────
         with tab_live:
             st.markdown("#### Real-time payload analysis")
             live = st.text_input(
@@ -335,7 +299,6 @@ if "🎯 Predict" in page:
                     "anything flagged as critical before acting on it."
                 )
 
-        # ── Batch Analysis ───────────────────────────────────────────────
         with tab_batch:
             col_in, col_opts = st.columns([3, 1])
             with col_in:
@@ -413,7 +376,6 @@ if "🎯 Predict" in page:
                         csv = out_df.to_csv(index=False)
                         st.download_button("⬇️ Download Results", csv, "scan_results.csv", "text/csv")
 
-        # ── Attack Library (fixed) ──────────────────────────────────────
         with tab_library:
             st.markdown("#### Click an example to load it into the Live Scanner")
             for attack_type, examples in ATTACK_LIBRARY.items():
@@ -436,27 +398,28 @@ if "🎯 Predict" in page:
                         """, unsafe_allow_html=True)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# PAGE: HYPOTHETICAL DATA
-# ═══════════════════════════════════════════════════════════════════════════
-
 elif "🧪 Hypothetical Data" in page:
     st.markdown("## 🧪 Hypothetical Data Generator")
     explain(
         "You don't need a real attack dataset to explore this app. Click the button "
         "below and the app will invent realistic-looking XSS, SQLi, and normal text "
-        "examples — including obfuscated and tricky-but-harmless ones — then train a "
-        "small model on them, all in your browser, in a few seconds."
+        "examples, run them through the SAME cleaning steps as the project notebook "
+        "(duplicate removal, missing-value handling, whitespace stripping, constant-"
+        "column dropping), then train a small model on them — all in your browser, "
+        "in a few seconds."
     )
     expert_detail(
         "Synthetic examples are drawn from 12–14 distinct templates per class "
         "(covering obfuscation like URL-encoding, mixed casing, blind/time-based SQLi, "
         "and event-handler variety for XSS), plus deliberately tricky Normal-class "
         "sentences that contain attack-adjacent words (`select`, `union`, `cookie`) to "
-        "create realistic class overlap. A configurable fraction of labels is randomly "
+        "create realistic class overlap. The generated frame is passed through "
+        "`core.clean_dataframe()`, which mirrors `notebooks/01_eda.ipynb` Step 2 "
+        "(dedupe → missing-value fill → whitespace strip → constant-column drop) before "
+        "any features are engineered. A configurable fraction of labels is randomly "
         "flipped (`label_noise`, default 3%) to simulate real annotation noise. The "
-        "classifier is a depth-capped `RandomForestClassifier` evaluated with 5-fold "
-        "stratified cross-validation, not just a single train/test split."
+        "classifier is a depth-capped `RandomForestClassifier` evaluated with stratified "
+        "cross-validation, not just a single train/test split."
     )
 
     c1, c2 = st.columns(2)
@@ -467,16 +430,16 @@ elif "🧪 Hypothetical Data" in page:
                                help="Percent of labels randomly flipped to simulate real-world annotation noise.")
 
     if st.button("🎲 Generate & Train", type="primary"):
-        with st.spinner("Generating hypothetical data and training…"):
+        with st.spinner("Generating hypothetical data, cleaning it, and training…"):
             df_synth = generate_synthetic_dataset(n_per_class=n_per_class, label_noise=noise_pct / 100)
             bundle = train_model(df_synth)
         st.session_state.trained_bundle = bundle
-        st.success(f"Trained on {len(df_synth)} synthetic examples.")
+        st.success(f"Trained on {len(df_synth)} synthetic examples (after cleaning).")
         st.rerun()
 
     if st.session_state.trained_bundle:
         bundle = st.session_state.trained_bundle
-        st.markdown("### Preview of generated data")
+        st.markdown("### Preview of generated & cleaned data")
         preview_df = generate_synthetic_dataset(n_per_class=5)
         st.dataframe(preview_df, use_container_width=True)
 
@@ -491,22 +454,18 @@ elif "🧪 Hypothetical Data" in page:
                   <div class="metric-value" style="color:#7c3aed;">{val:.2%}</div>
                 </div>""", unsafe_allow_html=True)
         st.caption(
-            f"5-fold cross-validation F1: {bundle['metadata']['cv_f1_mean']:.2%} "
+            f"Cross-validation F1: {bundle['metadata']['cv_f1_mean']:.2%} "
             f"± {bundle['metadata']['cv_f1_std']:.2%} — a single train/test split can get lucky; "
             f"cross-validation gives a steadier, more trustworthy number."
         )
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# PAGE: DASHBOARD
-# ═══════════════════════════════════════════════════════════════════════════
-
 elif "📊 Dashboard" in page:
     st.markdown("## 📊 Model Performance Dashboard")
 
     if not active_model:
-        st.info("No model loaded yet. Visit '🧪 Hypothetical Data' to train one, or drop a real "
-                 "model at `E:\\CYBERSECURITY\\models\\final_model.joblib`.")
+        st.info("No model loaded yet. Visit '🧪 Hypothetical Data' to train one, or place a "
+                 "real trained model at `models/final_model.joblib` (relative to the project root).")
     else:
         bundle = st.session_state.trained_bundle
         acc = active_metadata.get("final_accuracy")
@@ -526,7 +485,6 @@ elif "📊 Dashboard" in page:
                     </div>""", unsafe_allow_html=True)
 
         if bundle:
-            # 1. Class distribution
             st.markdown("### 📊 Class Distribution (synthetic training data)")
             dist = bundle["class_distribution"]
             fig_bar = px.bar(x=dist.index, y=dist.values, color=dist.index,
@@ -535,7 +493,6 @@ elif "📊 Dashboard" in page:
             fig_bar.update_layout(showlegend=False, yaxis=dict(gridcolor="#1f2937"))
             st.plotly_chart(_plotly_dark(fig_bar, 280), use_container_width=True)
 
-            # 2. Confusion matrix
             st.markdown("### 🎯 Confusion Matrix (computed from the hold-out test set)")
             explain(
                 "Each row is what the true label actually was; each column is what the "
@@ -552,7 +509,6 @@ elif "📊 Dashboard" in page:
 
             col_a, col_b = st.columns(2)
 
-            # 3. ROC curves
             with col_a:
                 st.markdown("### 📈 ROC Curves")
                 explain("A curve hugging the top-left corner means the model separates "
@@ -573,7 +529,6 @@ elif "📊 Dashboard" in page:
                 )
                 st.plotly_chart(_plotly_dark(fig_roc, 340), use_container_width=True)
 
-            # 4. Precision-Recall curves
             with col_b:
                 st.markdown("### 📉 Precision-Recall Curves")
                 explain("Shows the trade-off between catching real attacks (recall) and "
@@ -582,7 +537,7 @@ elif "📊 Dashboard" in page:
                 for cls, d in bundle["pr_data"].items():
                     fig_pr.add_trace(go.Scatter(
                         x=d["recall"], y=d["precision"], mode="lines", name=cls,
-                        line=dict(color=CLASS_COLORS.get(cls, "#c0e605")),
+                        line=dict(color=CLASS_COLORS.get(cls, "#94a3b8")),
                     ))
                 fig_pr.update_layout(
                     xaxis=dict(title="Recall", gridcolor="#1f2937", range=[0, 1.02]),
@@ -593,7 +548,6 @@ elif "📊 Dashboard" in page:
 
             col_c, col_d = st.columns(2)
 
-            # 5. Feature importance
             with col_c:
                 st.markdown("### 🧩 Feature Importance")
                 explain("Which signals the model actually relies on most to make a call.")
@@ -606,7 +560,6 @@ elif "📊 Dashboard" in page:
                                       xaxis=dict(gridcolor="#1f2937"))
                 st.plotly_chart(_plotly_dark(fig_fi, 320), use_container_width=True)
 
-            # 6. PCA scatter — "shape of the data"
             with col_d:
                 st.markdown("### 🌀 2D Feature Map (PCA)")
                 explain("Each dot is one payload, projected down to 2 dimensions. "
@@ -619,10 +572,9 @@ elif "📊 Dashboard" in page:
                                        xaxis=dict(gridcolor="#1f2937"), yaxis=dict(gridcolor="#1f2937"))
                 st.plotly_chart(_plotly_dark(fig_pca, 320), use_container_width=True)
 
-            # 7. Cross-validation stability
-            st.markdown("### 🔁 Cross-Validation Stability (5 folds)")
+            st.markdown("### 🔁 Cross-Validation Stability")
             explain("Instead of trusting one lucky train/test split, the model is "
-                    "retrained 5 times on different slices of data. Consistent bars mean stable performance.")
+                    "retrained on several different slices of data. Consistent bars mean stable performance.")
             cv_scores = bundle["cv_scores"]
             fig_cv = px.bar(x=[f"Fold {i+1}" for i in range(len(cv_scores))], y=cv_scores,
                              labels={"x": "", "y": "F1 Score"}, color=cv_scores,
@@ -634,10 +586,6 @@ elif "📊 Dashboard" in page:
             st.info("Dashboard charts for a real, on-disk model will appear here once one is loaded. "
                      "Train a synthetic model on the Hypothetical Data page to see live charts now.")
 
-
-# ═══════════════════════════════════════════════════════════════════════════
-# PAGE: HISTORY
-# ═══════════════════════════════════════════════════════════════════════════
 
 elif "📜 History" in page:
     st.markdown("## 📜 Scan History")
@@ -676,10 +624,6 @@ elif "📜 History" in page:
             """, unsafe_allow_html=True)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# PAGE: MODEL INFO
-# ═══════════════════════════════════════════════════════════════════════════
-
 elif "📋 Model Info" in page:
     st.markdown("## 📋 Model Information")
 
@@ -696,11 +640,11 @@ elif "📋 Model Info" in page:
     st.markdown("### Pipeline Steps")
     steps = [
         ("1️⃣", "Data Collection", "Load real payloads, or generate realistic hypothetical ones on the fly"),
-        ("2️⃣", "Data Cleaning", "Remove duplicates, handle nulls, strip whitespace"),
+        ("2️⃣", "Data Cleaning", "Remove duplicates, handle nulls, strip whitespace, drop constant columns"),
         ("3️⃣", "Feature Engineering", "7 numeric features extracted from raw payload text"),
         ("4️⃣", "Train-Test Split", "80% train / 20% test (stratified)"),
         ("5️⃣", "Model Training", "Depth-capped RandomForestClassifier (150 trees, max_depth=6)"),
-        ("6️⃣", "Cross-Validation", "5-fold stratified CV for a stable performance estimate"),
+        ("6️⃣", "Cross-Validation", "Stratified CV for a stable performance estimate"),
         ("7️⃣", "Evaluation", "Accuracy, Precision, Recall, F1, ROC/AUC, PR curves, Confusion Matrix"),
         ("8️⃣", "Live Inference", "Type or paste any text on the Predict page"),
         ("9️⃣", "Deployment", "This Streamlit app, or the Flask REST API (api.py)"),
@@ -712,10 +656,6 @@ elif "📋 Model Info" in page:
         </div>
         """, unsafe_allow_html=True)
 
-
-# ═══════════════════════════════════════════════════════════════════════════
-# PAGE: ABOUT
-# ═══════════════════════════════════════════════════════════════════════════
 
 elif "ℹ️ About" in page:
     st.markdown("## ℹ️ About CyberShield")
@@ -761,11 +701,10 @@ elif "ℹ️ About" in page:
 | `kw_xss` | Binary flag for XSS keywords (`<script`, `onerror`, `%3cscript`, …) |
 
 **Model:** `RandomForestClassifier(n_estimators=150, max_depth=6, min_samples_leaf=3)`,
-evaluated with an 80/20 stratified split plus 5-fold stratified cross-validation.
+evaluated with an 80/20 stratified split plus stratified cross-validation.
 Depth and leaf-size caps are deliberate regularization to prevent memorizing the
-synthetic templates. When a real trained model exists at
-`E:\\CYBERSECURITY\\models\\final_model.joblib`, it's loaded automatically and
-takes priority over the synthetic model.
+synthetic templates. When a real trained model exists at `models/final_model.joblib`
+(project root), it's loaded automatically and takes priority over the synthetic model.
 """)
 
     st.markdown("""

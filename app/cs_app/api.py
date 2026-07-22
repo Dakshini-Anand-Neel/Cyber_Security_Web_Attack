@@ -1,7 +1,7 @@
 """
 api.py
 ======
-Flask REST API — Web Attack Detection
+Flask REST API — Web Attack Detection (self-contained edition)
 
 Uses the same core.py module as app.py, so both stay in sync automatically.
 
@@ -27,9 +27,6 @@ logger = logging.getLogger(__name__)
 def create_app() -> Flask:
     app = Flask(__name__)
 
-    # Try a real, previously-trained model first. If none exists on disk,
-    # fall back to training a demo model on realistic synthetic data so the
-    # API is never stuck in a permanently "degraded" state.
     artifacts = try_load_real_model()
     bundle = None
 
@@ -62,7 +59,6 @@ def create_app() -> Flask:
 
     @app.route("/retrain", methods=["POST"])
     def retrain():
-        """Regenerate synthetic data and retrain the demo model on demand."""
         nonlocal model, metadata, bundle
         body = request.get_json(force=True, silent=True) or {}
         n_per_class = int(body.get("n_per_class", 250))

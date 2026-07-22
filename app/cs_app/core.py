@@ -3,9 +3,6 @@ core.py
 =======
 Shared logic for CyberShield: feature engineering, a realistic synthetic
 ("hypothetical") data generator, model training, and prediction.
-
-Both app.py (Streamlit UI) and api.py (Flask REST API) import from this
-single file, so there is exactly one place where the ML logic can break.
 """
 
 from __future__ import annotations
@@ -35,24 +32,18 @@ except ImportError:
     HAVE_JOBLIB = False
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# CONSTANTS
-# ═══════════════════════════════════════════════════════════════════════════
-
 CLASS_ORDER = ["Normal", "XSS", "SQLi"]
 LABEL_MAP = {i: c for i, c in enumerate(CLASS_ORDER)}
 
 CLASS_COLORS = {"Normal": "#10b981", "XSS": "#ef4444", "SQLi": "#7c3aed"}
 CLASS_BADGES = {"Normal": "badge-normal", "XSS": "badge-xss", "SQLi": "badge-sqli"}
 
-# (severity name, color, gauge score out of 100)
 SEVERITY = {
     "Normal": ("SAFE", "#10b981", 5),
     "XSS": ("HIGH", "#f59e0b", 75),
     "SQLi": ("CRITICAL", "#ef4444", 95),
 }
 
-# Real, well-known example payloads shown in the Attack Library UI tab.
 ATTACK_LIBRARY = {
     "XSS": [
         ("Basic script tag", "<script>alert('XSS')</script>"),
@@ -78,10 +69,6 @@ FEATURE_COLUMNS = ["payload_len", "payload_entropy", "special_char_cnt",
                    "digit_ratio", "upper_ratio", "kw_sql", "kw_xss"]
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# FEATURE ENGINEERING
-# ═══════════════════════════════════════════════════════════════════════════
-
 def _shannon_entropy(s: str) -> float:
     if not s:
         return 0.0
@@ -95,7 +82,6 @@ _XSS_KEYWORDS = ("<script", "onerror", "onload", "javascript:", "<img", "<svg", 
 
 
 def extract_features(payloads: list[str]) -> pd.DataFrame:
-    """Turn raw text payloads into numeric features a model can learn from."""
     rows = []
     for p in payloads:
         p = p or ""
@@ -115,15 +101,6 @@ def extract_features(payloads: list[str]) -> pd.DataFrame:
         })
     return pd.DataFrame(rows)
 
-
-# ═══════════════════════════════════════════════════════════════════════════
-# HYPOTHETICAL / SYNTHETIC DATA
-# Realistic means: many distinct patterns (not one template with a word
-# swapped), obfuscation tricks real attackers use, and — critically — some
-# genuinely ambiguous, overlapping examples so the problem isn't trivially
-# easy. Real security datasets are noisy; a model that hits 100% on them is
-# almost always overfit or leaking the answer, not "good".
-# ═══════════════════════════════════════════════════════════════════════════
 
 _XSS_TEMPLATES = [
     "<script>alert('{w}')</script>",
@@ -155,9 +132,6 @@ _SQLI_TEMPLATES = [
     "{w}' AND (SELECT COUNT(*) FROM users)>0--",
     "1' UNION SELECT NULL,NULL,version()-- {w}",
 ]
-# Deliberately includes some sentences that CONTAIN attack-adjacent words
-# (select, or, cookie, script, table) but are ordinary, harmless text — this
-# is what makes the dataset "hard" and realistic instead of trivially easy.
 _NORMAL_TEMPLATES = [
     "What is the weather in {w} today?",
     "Best restaurants near {w}",
@@ -179,13 +153,49 @@ _FILLER_WORDS = ["cookie", "session", "chennai", "laptop", "mumbai", "delhi",
                  "1234", "test", "hello", "project", "table", "users"]
 
 
+def clean_dataframe(df: pd.DataFrame, payload_col: str = "payload") -> tuple[pd.DataFrame, dict]:
+    """
+    Mirrors notebooks/01_eda.ipynb Step 2 (Data Cleaning) exactly:
+    dedupe -> fill missing -> strip whitespace -> drop constant columns.
+    Applied here to the synthetic (hypothetical) dataset so the demo
+    pipeline matches the real notebook pipeline step-for-step.
+    """
+    report = {}
+    df = df.copy()
+
+    before = len(df)
+    df = df.drop_duplicates()
+    report["duplicates_removed"] = before - len(df)
+
+    missing = df.isnull().sum()
+    report["missing_before"] = int(missing.sum())
+    for col in df.columns:
+        if df[col].isnull().any():
+            if df[col].dtype in ("float64", "int64"):
+                df[col] = df[col].fillna(df[col].median())
+            else:
+                df[col] = df[col].fillna(df[col].mode().iloc[0])
+    report["missing_after"] = int(df.isnull().sum().sum())
+
+    for col in df.select_dtypes(include="object").columns:
+        df[col] = df[col].str.strip()
+
+    protect = {"label"}
+    constant_cols = [c for c in df.columns if df[c].nunique() <= 1 and c not in protect]
+    if constant_cols:
+        df = df.drop(columns=constant_cols)
+    report["constant_cols_dropped"] = constant_cols
+
+    return df.reset_index(drop=True), report
+
+
 def generate_synthetic_dataset(n_per_class: int = 250, seed: int = 42,
                                 label_noise: float = 0.03) -> pd.DataFrame:
     """
-    Generate a hypothetical dataset. `label_noise` randomly flips a small
-    fraction of labels (default 3%) to mimic real-world annotation noise —
-    this is a standard technique and is what keeps accuracy in a believable
-    range instead of an unrealistic 100%.
+    Generate a hypothetical dataset, then run it through the SAME cleaning
+    steps used in notebooks/01_eda.ipynb Step 2 (dedupe, missing-value
+    handling, whitespace strip, constant-column drop) so the "Hypothetical
+    Data" demo mirrors the real pipeline, not just a lookalike.
     """
     rng = np.random.default_rng(seed)
     records = []
@@ -196,36 +206,26 @@ def generate_synthetic_dataset(n_per_class: int = 250, seed: int = 42,
             tmpl = templates[rng.integers(0, len(templates))]
             word = _FILLER_WORDS[rng.integers(0, len(_FILLER_WORDS))]
             payload = tmpl.format(w=word)
-            # small random casing/whitespace jitter for extra realism
             if rng.random() < 0.15:
                 payload = payload.replace(" ", "  ", 1)
             records.append({"payload": payload, "label": label})
 
-    df = pd.DataFrame(records).drop_duplicates(subset="payload").reset_index(drop=True)
+    df = pd.DataFrame(records)
+    df, _clean_report = clean_dataframe(df, payload_col="payload")
     df = df.sample(frac=1, random_state=seed).reset_index(drop=True)
 
-    # Inject label noise: randomly relabel a small fraction of rows
-    if label_noise > 0:
+    if label_noise > 0 and len(df) > 0:
         n_flip = int(len(df) * label_noise)
-        flip_idx = rng.choice(df.index, size=n_flip, replace=False)
-        for i in flip_idx:
-            other = [c for c in CLASS_ORDER if c != df.loc[i, "label"]]
-            df.loc[i, "label"] = other[rng.integers(0, len(other))]
+        if n_flip > 0:
+            flip_idx = rng.choice(df.index, size=n_flip, replace=False)
+            for i in flip_idx:
+                other = [c for c in CLASS_ORDER if c != df.loc[i, "label"]]
+                df.loc[i, "label"] = other[rng.integers(0, len(other))]
 
     return df.reset_index(drop=True)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# TRAINING
-# ═══════════════════════════════════════════════════════════════════════════
-
 def train_model(df: pd.DataFrame, seed: int = 42):
-    """
-    Train a regularized Random Forest. max_depth / min_samples_leaf are
-    capped deliberately — an unconstrained forest can memorize small
-    synthetic datasets and report a meaningless 100%. Capping complexity
-    plus 5-fold cross-validation gives a realistic, trustworthy estimate.
-    """
     X = extract_features(df["payload"].tolist())
     y = df["label"]
 
@@ -238,8 +238,9 @@ def train_model(df: pd.DataFrame, seed: int = 42):
         random_state=seed,
     )
 
-    # 5-fold cross-validation on the training set for a more honest estimate
-    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=seed)
+    n_splits = min(5, y_train.value_counts().min())
+    n_splits = max(2, n_splits)
+    cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
     cv_scores = cross_val_score(model, X_train, y_train, cv=cv, scoring="f1_weighted")
 
     model.fit(X_train, y_train)
@@ -253,7 +254,6 @@ def train_model(df: pd.DataFrame, seed: int = 42):
     labels_present = sorted(y.unique(), key=lambda c: CLASS_ORDER.index(c) if c in CLASS_ORDER else 99)
     cm = confusion_matrix(y_test, preds, labels=labels_present)
 
-    # ROC curve data (one-vs-rest) for visualization
     y_test_bin = label_binarize(y_test, classes=labels_present)
     probas = model.predict_proba(X_test)
     roc_data = {}
@@ -261,13 +261,11 @@ def train_model(df: pd.DataFrame, seed: int = 42):
         fpr, tpr, _ = roc_curve(y_test_bin[:, i], probas[:, i])
         roc_data[cls] = {"fpr": fpr.tolist(), "tpr": tpr.tolist(), "auc": float(auc(fpr, tpr))}
 
-    # Precision-Recall curve data
     pr_data = {}
     for i, cls in enumerate(labels_present):
         p, r, _ = precision_recall_curve(y_test_bin[:, i], probas[:, i])
         pr_data[cls] = {"precision": p.tolist(), "recall": r.tolist()}
 
-    # 2D PCA projection of the feature space, for a visual "shape of the data"
     pca = PCA(n_components=2, random_state=seed)
     coords = pca.fit_transform(X)
     pca_df = pd.DataFrame(coords, columns=["PC1", "PC2"])
@@ -316,13 +314,9 @@ def predict(payloads: list[str], model) -> dict:
     return {"labels": list(labels), "confidence": confidence, "probabilities": probabilities, "features": feat}
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# LOADING A REAL, PREVIOUSLY-TRAINED MODEL FROM DISK (optional)
-# ═══════════════════════════════════════════════════════════════════════════
-
 CANDIDATE_MODEL_DIRS = [
-    Path("E:/CYBERSECURITY/models"),
     Path.cwd() / "models",
+    Path(__file__).resolve().parents[2] / "models",
     Path(__file__).parent / "models",
 ]
 
